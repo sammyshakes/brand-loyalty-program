@@ -29,7 +29,7 @@ Follow these steps to set up the project locally:
 
    ```sh
    git clone https://github.com/sammyshakes/brand-loyalty-points-factory.git
-   cd brand-loyalty-points-factory
+   cd brand-loyalty-program
    ```
 
 2. **Build the Project**

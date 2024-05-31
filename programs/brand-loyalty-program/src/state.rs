@@ -9,4 +9,5 @@ pub struct State {
 pub struct Brand {
     pub name: String,
     pub owner: Pubkey,
+    pub points_mint: Pubkey,
 }

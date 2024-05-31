@@ -17,6 +17,7 @@ mod points_program {
     }
 
     pub fn mint_points(ctx: Context<MintPoints>, amount: u64) -> Result<()> {
+        // Ensure the minting is authorized by the admin or a derived PDA
         require!(
             ctx.accounts.state.admin == *ctx.accounts.admin.key,
             error::ErrorCode::Unauthorized
@@ -25,6 +26,7 @@ mod points_program {
     }
 
     pub fn transfer_points(ctx: Context<TransferPoints>, amount: u64) -> Result<()> {
+        // Ensure the transfer is authorized by the admin or a derived PDA
         require!(
             ctx.accounts.state.admin == *ctx.accounts.admin.key,
             error::ErrorCode::Unauthorized

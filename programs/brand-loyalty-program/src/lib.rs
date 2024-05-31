@@ -17,11 +17,18 @@ mod brand_loyalty_program {
     }
 
     pub fn create_brand(ctx: Context<CreateBrand>, brand_name: String) -> Result<()> {
-        require!(
-            ctx.accounts.state.admin == *ctx.accounts.admin.key,
-            error::ErrorCode::Unauthorized
-        );
-        processor::create_brand(ctx, brand_name)
+        let brand = &mut ctx.accounts.brand;
+        brand.name = brand_name;
+        brand.owner = *ctx.accounts.admin.key;
+
+        // Derive the PDA for the brand's points mint
+        let (points_mint_pda, _bump_seed) =
+            Pubkey::find_program_address(&[b"points_mint", brand.key().as_ref()], ctx.program_id);
+
+        // Ensure the derived PDA is stored in the brand's state
+        brand.points_mint = points_mint_pda;
+
+        Ok(())
     }
 }
 
@@ -38,7 +45,7 @@ pub struct Initialize<'info> {
 pub struct CreateBrand<'info> {
     #[account(mut)]
     pub state: Account<'info, state::State>,
-    #[account(init, payer = admin, space = 8 + 32 + 40)] // adjust space as needed
+    #[account(init, payer = admin, space = 8 + 32 + 40)] // Adjust space as needed
     pub brand: Account<'info, state::Brand>,
     #[account(mut)]
     pub admin: Signer<'info>,

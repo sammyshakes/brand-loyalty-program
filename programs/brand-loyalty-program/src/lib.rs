@@ -7,7 +7,7 @@ pub mod state;
 declare_id!("AT6whjLqybw5CzMA7g5Lnj6mXcF4phGV34e9MMzQtc5");
 
 #[program]
-mod brand_loyalty_program {
+mod tronic_points {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, admin: Pubkey) -> Result<()> {
@@ -38,7 +38,7 @@ mod brand_loyalty_program {
         let bump_seed = brand.bump_seed;
 
         let seeds: &[&[u8]] = &[b"points_mint", brand_key.as_ref(), &[bump_seed]];
-        let seeds_arr = [seeds]; // Bind to a variable with a longer lifetime
+        let seeds_arr: &[&[&[u8]]] = &[seeds];
 
         // Create a CPI context to call the points program
         let cpi_accounts = MintTo {
@@ -48,7 +48,7 @@ mod brand_loyalty_program {
         };
 
         let cpi_program = ctx.accounts.points_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, &seeds_arr);
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, seeds_arr);
 
         token::mint_to(cpi_ctx, amount)?;
 
@@ -82,11 +82,11 @@ pub struct MintPoints<'info> {
     pub state: Account<'info, state::State>,
     #[account(mut)]
     pub brand: Account<'info, state::Brand>,
-    /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut)]
+    /// CHECK: This is not dangerous because we don't read or write from this account
     pub points_mint: AccountInfo<'info>,
-    /// CHECK: This is not dangerous because we don't read or write from this account
     #[account(mut)]
+    /// CHECK: This is not dangerous because we don't read or write from this account
     pub user_token_account: AccountInfo<'info>,
     #[account(mut)]
     pub admin: Signer<'info>,

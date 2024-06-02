@@ -6,8 +6,11 @@ pub struct State {
 }
 
 #[account]
-pub struct Mint {
-    pub supply: u64,
+pub struct Brand {
+    pub name: String,
+    pub owner: Pubkey,
+    pub points_mint: Pubkey,
+    pub bump_seed: u8,
 }
 
 #[account]

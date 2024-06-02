@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::{self, MintTo, Token, TokenAccount};
 
 pub mod error;
-pub mod processor;
 pub mod state;
 
 declare_id!("AT6whjLqybw5CzMA7g5Lnj6mXcF4phGV34e9MMzQtc5");
@@ -22,11 +22,35 @@ mod brand_loyalty_program {
         brand.owner = *ctx.accounts.admin.key;
 
         // Derive the PDA for the brand's points mint
-        let (points_mint_pda, _bump_seed) =
+        let (points_mint_pda, bump_seed) =
             Pubkey::find_program_address(&[b"points_mint", brand.key().as_ref()], ctx.program_id);
 
-        // Ensure the derived PDA is stored in the brand's state
+        // Store the derived PDA and bump seed in the brand's state
         brand.points_mint = points_mint_pda;
+        brand.bump_seed = bump_seed;
+
+        Ok(())
+    }
+
+    pub fn mint_points(ctx: Context<MintPoints>, amount: u64) -> Result<()> {
+        let brand = &ctx.accounts.brand;
+        let brand_key = brand.to_account_info().key;
+        let bump_seed = brand.bump_seed;
+
+        let seeds: &[&[u8]] = &[b"points_mint", brand_key.as_ref(), &[bump_seed]];
+        let seeds_arr = [seeds]; // Bind to a variable with a longer lifetime
+
+        // Create a CPI context to call the points program
+        let cpi_accounts = MintTo {
+            mint: ctx.accounts.points_mint.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.brand.to_account_info(),
+        };
+
+        let cpi_program = ctx.accounts.points_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, &seeds_arr);
+
+        token::mint_to(cpi_ctx, amount)?;
 
         Ok(())
     }
@@ -45,9 +69,27 @@ pub struct Initialize<'info> {
 pub struct CreateBrand<'info> {
     #[account(mut)]
     pub state: Account<'info, state::State>,
-    #[account(init, payer = admin, space = 8 + 32 + 40)] // Adjust space as needed
+    #[account(init, payer = admin, space = 8 + 44 + 32 + 32)]
     pub brand: Account<'info, state::Brand>,
     #[account(mut)]
     pub admin: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct MintPoints<'info> {
+    #[account(mut)]
+    pub state: Account<'info, state::State>,
+    #[account(mut)]
+    pub brand: Account<'info, state::Brand>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub points_mint: AccountInfo<'info>,
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    #[account(mut)]
+    pub user_token_account: AccountInfo<'info>,
+    #[account(mut)]
+    pub admin: Signer<'info>,
+    /// CHECK: This is not dangerous because we only use this to call the token program
+    pub points_program: AccountInfo<'info>,
 }
